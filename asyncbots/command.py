@@ -36,7 +36,9 @@ class MessageCommand(Command):
         unless it is falsy, in which case sends it to the specified user."""
         channel = (slack.ids.cid(self.channel)
                    if self.channel else
-                   slack.ids.dmid(uid=self.user))
+                   slack.ids.dmid(uid=self.user)
+                   if self.user else
+                   event['channel'])
 
         max_index = (len(self.text) - 1) // 4000
         for index in range(max_index + 1):

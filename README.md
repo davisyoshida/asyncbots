@@ -1,11 +1,11 @@
 # AsyncBots
-
+[![PyPI version](https://badge.fury.io/py/asyncbots.svg)](https://badge.fury.io/py/asyncbots)
 ## Features
-`AsyncBots` provides an interface for writing Slack chat bots which respond to user defined commands. This allows users to run many different functionalities through a single RTM chat bot, which is convenient for unpaid Slack teams which only allow 5 bots.
+`AsyncBots` provides an `asyncio` based interface for writing Slack Real Time Messaging (![RTM](https://api.slack.com/rtm)) chat bots with almost no code other than the core functionality. All user defined bots run through a single bot user on Slack, with `AsyncBots` directing messages to the appropriate bots.
 
-Bots consist of a user defined command, and a function which will be called when the command is triggered. This function can then send messages, add reactions, upload files and more. This, in combination with the use of pyparsing to define commands makes `AsyncBots` extremely flexible, while maintaining simplicity.
+Bots consist of a user defined trigger (e.g. `!mycommand` or `!simulate <user>`) and a function which will be called when a user says the trigger in chat. When activated, the bot can then send messages, add reactions, upload files, and more. Commands are defined using ![pyparsing](http://pyparsing.wikispaces.com/), which allows for filtering of messages without adding complexity.
 
-In channels the bot is added to, channel history is (optionally) saved, which can be helpful as Slack only allows access to the last 10,000 messages a free team has sent.
+In channels the bot is present in, channel history is (optionally) saved, including beyond the 10k message limit imposed on free teams.
 
 ## Examples
 
@@ -24,8 +24,9 @@ class MyBot(SlackBot)
         self.expr = 'greet' + Word(alphas).setResultsName('user')
 
     @register()
-    async def handler(self, sender, channel, parsed):
-        return MessageCommand('Hello ' + parsed['user'])
+    async def handler(self, sender, channel, parsed_message):
+        # Send a reply in the channel this command was received in
+        return MessageCommand('Hello ' + parsed_message['user'])
 ```
 The fields `self.name` and `self.expr` are used to register the command with the Slack core. To use other field names (for instance if you want multiple commands on one class), simply pass them to `@register`:
 
@@ -39,7 +40,7 @@ class MyBot(SlackBot)
         self.another_expr = 'airspeed'
 
     @register(name='another_name', expr='another_expr')
-    async def get_airspeed(self, sender, channel, parsed):
+    async def get_airspeed(self, sender, channel, parsed_message):
         return MessageCommand('African or European?')
 ```
 
@@ -56,4 +57,17 @@ def main():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(slack.run())
 ```
-The above method of constructing the `Slack` object assumes that the `SLACK_TOKEN` and `SLACK_BOT_NAME` environment variables are set to the Slack API token and bot's username respectively.
+The above method of constructing the `Slack` object assumes that the `SLACK_TOKEN` and `SLACK_BOT_NAME` environment variables are set to the Slack API token and bot's name in Slack respectively.
+
+### Enabling logging
+To enable message logging, create a connection to a mongoDB server using `mongoengine`.
+```python
+from mongoengine import connect
+from asyncbots.slack_api import Slack, SlackConfig
+...
+def main():
+    connect('mydbname')
+    config = SlackConfig(db=True)
+    slack = Slack(config)
+    ...
+```

@@ -28,7 +28,7 @@ class SimpleBot(SlackBot):
         in_channel: The channel in which the message was sent, or None if it was a DM
         parsed: The result of calling self.some_expr.parseString() on the text of the message
         """
-        return MessageCommand(user=user, channel=in_channel, text='Hello World')
+        return MessageCommand(text='Hello World')
 
     @register(name='other_name', expr='second_expr', doc='second_doc')
     async def second_function(self, user, in_channel, parsed):
@@ -38,7 +38,7 @@ class SimpleBot(SlackBot):
         else:
             greeting = 'Hello'
 
-        return MessageCommand(user=user, channel=in_channel, text=greeting)
+        return MessageCommand(text=greeting)
 
 
 def main():
