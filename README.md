@@ -3,9 +3,9 @@
 ## Features
 `AsyncBots` provides an interface for writing Slack chat bots which respond to user defined commands. This allows users to run many different functionalities through a single RTM chat bot, which is convenient for unpaid Slack teams which only allow 5 bots.
 
-Bots consist of a user defined command, and a function which will be called when the command is triggered. This function can then send messages, add reactions, upload files and more. This, in combination with the use of pyparsing to define commands makes `AyncBots` powerful and flexible.
+Bots consist of a user defined command, and a function which will be called when the command is triggered. This function can then send messages, add reactions, upload files and more. This, in combination with the use of pyparsing to define commands makes `AsyncBots` powerful and flexible.
 
-In channels the bot is added to, channel history is saved, which can be helpful as Slack only allows access to the last 10,000 messages a free team has sent.
+In channels the bot is added to, channel history is (optionally) saved, which can be helpful as Slack only allows access to the last 10,000 messages a free team has sent.
 
 ## Examples
 
@@ -18,8 +18,8 @@ from pyparsing import alphas, Word
 
 class MyBot(SlackBot)
     def __init__(self, slack=None):
-        # Call SlackBot's constructor
-        super(SlackBot, self).__init__(self, slack=slack)
+        # Call parent's constructor
+        super(MyBot, self).__init__(self, slack=slack)
         self.name = 'My Bot'
         self.expr = 'greet' + Word(alphas).setResultsName('user')
 
@@ -27,7 +27,7 @@ class MyBot(SlackBot)
     async def handler(self, sender, channel, parsed):
         return MessageCommand('Hello ' + parsed['user'])
 ```
-The fields `self.name` and `self.expr` are used to register the command with the Slack core. To use other field names, simply pass them to `@register`:
+The fields `self.name` and `self.expr` are used to register the command with the Slack core. To use other field names (for instance if you want multiple commands on one class), simply pass them to `@register`:
 
 ```python
 ...
@@ -42,3 +42,18 @@ class MyBot(SlackBot)
     async def get_airspeed(self, sender, channel, parsed):
         return MessageCommand('African or European?')
 ```
+
+### Connecting to Slack
+In order to connect to Slack, construct an instance of `asyncbots.slack_api.Slack`:
+```python
+import asyncio
+from asyncbots.slack_api import Slack
+...
+def main():
+    slack = Slack()
+    MyBot(slack=slack)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(slack.run())
+```
+The above method of constructing the `Slack` object assumes that the `SLACK_TOKEN` and `SLACK_BOT_NAME` environment variables are set to the Slack API token and bot's username respectively.

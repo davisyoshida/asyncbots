@@ -42,19 +42,7 @@ class SimpleBot(SlackBot):
 
 
 def main():
-    # Connected to mongoDB for storing message history
-    mongoengine.connect(os.environ['BOT_NAME'])
-
-    config = SlackConfig(
-        token=os.environ['SLACK_TOKEN'],
-        name=os.environ['BOT_NAME'],
-        admin_token=os.environ.get('SLACK_ADMIN_TOKEN', None),
-        alert='!',
-        load_history=False,
-        clear_commands=False,
-        admins=set()
-    )
-    slack = Slack(config)
+    slack = Slack()
     # No need to do anything other than construct the bot
     SimpleBot(slack=slack)
 

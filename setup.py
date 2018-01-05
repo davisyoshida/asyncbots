@@ -12,11 +12,13 @@ A bot which can be triggered by the message ``!greet Guido`` looks like this:
 
     from asyncbots.bot import SlackBot, register
     from asyncbots.command import MessageCommand
-    from pyparsing import alpha, Word
+    from pyparsing import alphas, Word
 
     class MyBot(SlackBot)
         def __init__(self):
             self.name = 'My Bot'
+
+            # Match 'greet' followed by any word
             self.expr = 'greet' + Word(alphas).setResultsName('user')
 
         @register()

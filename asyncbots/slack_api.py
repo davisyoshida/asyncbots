@@ -4,6 +4,7 @@ from collections import ChainMap, defaultdict, namedtuple
 from itertools import chain
 import json
 import logging
+import os
 
 from pyparsing import ParseException
 import requests
@@ -31,8 +32,17 @@ Handlers = namedtuple('Handlers', ['filtered', 'unfiltered'])
 
 
 SlackConfig = namedtuple('SlackConfig',
-                         ['token', 'admin_token', 'alert', 'name', 'load_history', 'clear_commands', 'admins'])
+                         ['token', 'name', 'admin_token', 'alert', 'load_history', 'clear_commands', 'admins',  'db'])
 
+DEFAULT_CONFIG = SlackConfig(
+    token=None,
+    name=None,
+    admin_token=None,
+    alert='!',
+    load_history=False,
+    clear_commands=False,
+    admins=None,
+    db=False)
 
 RTM_START = 'rtm.start'
 CHANNEL_HISTORY = 'channels.history'
@@ -42,13 +52,28 @@ ADD_REACTION = 'reactions.add'
 DELETE_CHAT = 'chat.delete'
 UPLOAD_FILE = 'files.upload'
 
+TOKEN_ENV = 'SLACK_TOKEN'
+NAME_ENV = 'SLACK_BOT_NAME'
 
 class Slack:
 
     """Main class which handles bots and communicates with Slack"""
 
-    def __init__(self, config):
-        self._config = config
+    def __init__(self, config=None):
+        self._config = config if config is not None else DEFAULT_CONFIG
+
+        if self._config.token is None:
+            # Try to get token from environment
+            if TOKEN_ENV  not in os.environ:
+                raise ValueError('Must either provide an API token or set the environment variable {}.'.format(TOKEN_ENV))
+            self._config = self._config._replace(token=os.environ[TOKEN_ENV])
+
+        if self._config.name is None:
+            if NAME_ENV not in os.environ:
+                raise ValueError('Must either provide the name of the bot or set the environment variable {}.'.format(NAME_ENV))
+            self._config = self._config._replace(name=os.environ[NAME_ENV])
+
+
 
         self._handlers = Handlers(filtered={}, unfiltered=[])
         self._parser = SlackParser(self._config.alert)
@@ -74,9 +99,12 @@ class Slack:
         body = response.json()
         self.ids = SlackIds(
             self._config.token, body['channels'], body['users'], body['groups'])
-        for admin_name in self._config.admins:
-            self.admins.add(self.ids.uid(admin_name))
-        if self._config.load_history:
+
+        if self._config.admins is not None:
+            for admin_name in self._config.admins:
+                self.admins.add(self.ids.uid(admin_name))
+
+        if self._config.load_history and self._config.db:
             await self._load_history()
             self._config = SlackConfig(
                 **ChainMap({'load_history': False}, self._config._asdict()))
@@ -251,11 +279,12 @@ class Slack:
                         **kwargs)
                     await self._exhaust_command(command, event)
 
-            await self.store_message(
-                user=user,
-                channel=channel,
-                text=event['text'],
-                timestamp=event['ts'])
+            if self._config.db:
+                await self.store_message(
+                    user=user,
+                    channel=channel,
+                    text=event['text'],
+                    timestamp=event['ts'])
 
     async def _handle_response(self, event):
         rt = event["reply_to"]
