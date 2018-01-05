@@ -22,8 +22,8 @@ A bot which can be triggered by the message ``!greet Guido`` looks like this:
             self.expr = 'greet' + Word(alphas).setResultsName('user')
 
         @register()
-        async def handler(self, sender, channel, parsed):
-            return MessageCommand('Hello ' + parsed['user'])
+        async def handler(self, sender, channel, parsed_message):
+            return MessageCommand('Hello ' + parsed_message['user'])
 """
 from setuptools import setup
 
