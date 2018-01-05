@@ -3,7 +3,7 @@
 ## Features
 `AsyncBots` provides an interface for writing Slack chat bots which respond to user defined commands. This allows users to run many different functionalities through a single RTM chat bot, which is convenient for unpaid Slack teams which only allow 5 bots.
 
-Bots consist of a user defined command, and a function which will be called when the command is triggered. This function can then send messages, add reactions, upload files and more. This, in combination with the use of pyparsing to define commands makes `AsyncBots` powerful and flexible.
+Bots consist of a user defined command, and a function which will be called when the command is triggered. This function can then send messages, add reactions, upload files and more. This, in combination with the use of pyparsing to define commands makes `AsyncBots` extremely flexible, while maintaining simplicity.
 
 In channels the bot is added to, channel history is (optionally) saved, which can be helpful as Slack only allows access to the last 10,000 messages a free team has sent.
 
