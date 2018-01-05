@@ -1,0 +1,4 @@
+mongoengine
+pyparsing
+requests
+websockets
