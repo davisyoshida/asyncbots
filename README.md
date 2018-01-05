@@ -39,6 +39,6 @@ class MyBot(SlackBot)
         self.another_expr = 'airspeed'
 
     @register(name='another_name', expr='another_expr')
-    def get_airspeed(self, sender, channel, parsed):
+    async def get_airspeed(self, sender, channel, parsed):
         return MessageCommand('African or European?')
 ```
