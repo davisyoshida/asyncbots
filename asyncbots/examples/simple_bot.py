@@ -12,9 +12,8 @@ from pyparsing import alphanums, CaselessLiteral, Optional, StringEnd, Word
 class SimpleBot(SlackBot):
     def __init__(self, slack=None):
         super(SimpleBot, self).__init__(slack=slack)
-        self.command_name = 'Hello World'
-        self.some_expr = CaselessLiteral('mycommand') # Bot will trigger on messages starting with !mycommand
-        self.a_doc = 'Some help text.' # Will be included in the help text the bot provides.
+        self.name = 'Hello World'
+        self.expr = CaselessLiteral('mycommand') # Bot will trigger on messages starting with !mycommand
 
         # Bot will trigger on messages of the form !othercommand [alphanumeric argument]
         self.other_name = 'Greeter'
@@ -22,7 +21,7 @@ class SimpleBot(SlackBot):
         self.second_doc = 'Greet a user\n\tothercommand [name]'
 
     # These areguments are used to find the appropriate class members when the bot is run
-    @register(name='command_name', expr='some_expr', doc='a_doc')
+    @register()
     async def hello_function(self, user, in_channel, parsed):
         """
         user: The user ID of the user that sent the message

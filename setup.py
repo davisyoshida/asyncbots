@@ -1,14 +1,36 @@
-from setuptools import setup
+"""
+AsyncBots
+==========
 
-with open('README.rst', encoding='utf-8') as f:
-    long_description = f.read()
+This library provides a simple ``asyncio`` based interface for writing ``RTM <https://api.slack.com/rtm>`` bots for Slack. Many distinct functions can be run through a single Slack bot plugin, triggered by user defined commands (e.g. ``!myCommand``).
+
+Example
+```````
+A bot which can be triggered by the message ``!greet Guido`` looks like this:
+
+.. code:: python
+
+    from asyncbots.bot import SlackBot, register
+    from asyncbots.command import MessageCommand
+    from pyparsing import alpha, Word
+
+    class MyBot(SlackBot)
+        def __init__(self):
+            self.name = 'My Bot'
+            self.expr = 'greet' + Word(alphas).setResultsName('user')
+
+        @register()
+        async def handler(self, sender, channel, parsed):
+            return MessageCommand('Hello ' + parsed['user'])
+"""
+from setuptools import setup
 
 setup(
     name='asyncbots',
     version='0.1.1',
     packages=['asyncbots'],
     license='MIT',
-    long_description=long_description,
+    long_description=__doc__,
     description='A framework for Slack RTM bots.',
     url='https://github.com/davisyoshida/asyncbots',
     author='Davis Yoshida',

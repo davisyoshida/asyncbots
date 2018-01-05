@@ -6,7 +6,6 @@ from asyncbots.slack_api import Slack
 
 HandlerData = namedtuple('HandlerData', ['name', 'expr', 'channels', 'doc', 'priority', 'admin', 'include_timestamp'])
 
-
 class SlackHandler:
     """
     Wrapper to store some data along with a function.
@@ -30,7 +29,7 @@ class SlackHandler:
         return self._func
 
 
-def register(name=None, expr=None, channels=None, doc=None, priority=0, admin=False, include_timestamp=False):
+def register(name='name', expr='expr', channels=None, doc=None, priority=0, admin=False, include_timestamp=False):
     """
     Decorator for registering a function to be a slack handler.
     Must be used on a method in a class which inherits from SlackBot.
