@@ -56,7 +56,7 @@ class DeleteCommand(Command):
         pass
 
     async def execute(self, slack, event=None):
-        await slack.delete_message(event['channel'], event['user'], event['ts'])
+        await slack.delete_message(event['channel'], event['user'], event['ts'], admin_key=True)
 
 
 Record = namedtuple('Record', ['channel', 'uid', 'text', 'time'])
@@ -68,6 +68,7 @@ class HistoryCommand(Command):
     Pass a callback to slack with signature:
         f(hist_list) where hist is a list of (channel, user, text, time) namedtuples.
     The callback will be executed on a list of past messages which match the specified parameters.
+    Only works if Slack was constructed with db=True (requires MongoDB).
     """
 
     def __init__(self, callback, channel=None, user=None):
@@ -92,7 +93,7 @@ class HistoryCommand(Command):
 
 class ReactCommand(Command):
 
-    """Posts an emoji reaction on the message this command was created in response to"""
+    """Posts an emoji reaction on the message this command was created in response to."""
 
     def __init__(self, emoji):
         self._emoji = emoji
@@ -103,7 +104,10 @@ class ReactCommand(Command):
 
 class UploadCommand(Command):
 
-    """Uploads a file in the specified channel"""
+    """
+    Uploads a file in the specified channel.
+    Setting delete=True will causel the file to be deleted off the filesystem after upload.
+    """
 
     def __init__(self, user=None, channel=None, file_name=None, delete=False):
         self.user = user

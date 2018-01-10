@@ -51,5 +51,5 @@ def mention_to_uid(mention):
 
 
 def uid_to_mention(uid):
-    """Convert a UID to a valid mention."""
+    """Convert a UID to a mention."""
     return '<@{}>'.format(uid)

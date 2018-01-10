@@ -57,7 +57,30 @@ NAME_ENV = 'SLACK_BOT_NAME'
 
 class Slack:
 
-    """Main class which handles bots and communicates with Slack"""
+    """
+    Main class which manages bots and communication with Slack.
+    Args:
+        config (optional): A SlackConfig object with fields:
+            token: A string containing the API key to use for communication with
+                Slack.  If not set, it is assumed to be in the SLACK_TOKEN
+                environment variable.
+            name: The name of the bot user on Slack. This is used to ignore the
+                bot as a user.If set incorrectly, unexpected behavior may occur.
+            admin_token: A string containing an API key of an admin user account
+                on Slack. This is used for deleting messages. If not set,
+                deleting messages will be disabled.
+            alert: A prefix for filtered commands. Command parsing will only be
+                attempted on messages beginning with this prefix, or direct
+                messages to the bot user. (Default: '!')
+            load_history: If True, bot will dump history database and use the
+                web API to load all accessible history. (Default: False)
+            clear_commands: If True, on startup bot will delete all of its own
+                messages and commands sent it by users in order to unclutter
+                chat. (Default: False)
+            db: If True, assumes that a connection to MongoDB through mongoengine
+                has been established, and will be used to log message history.
+                (Default: False)
+    """
 
     def __init__(self, config=None):
         self._config = config if config is not None else DEFAULT_CONFIG
@@ -72,8 +95,6 @@ class Slack:
             if NAME_ENV not in os.environ:
                 raise ValueError('Must either provide the name of the bot or set the environment variable {}.'.format(NAME_ENV))
             self._config = self._config._replace(name=os.environ[NAME_ENV])
-
-
 
         self._handlers = Handlers(filtered={}, unfiltered=[])
         self._parser = SlackParser(self._config.alert)
@@ -93,10 +114,15 @@ class Slack:
         self._loaded_commands.extend(commands)
 
     async def connect(self):
-        """Connects to Slack, loads IDs, and returns the websocket URL."""
+        """Connects to Slack, loads IDs, runs preloaded commands and returns the websocket URL."""
         response = requests.get(
             BASE_URL + RTM_START, params={'token': self._config.token})
-        body = response.json()
+        try:
+            body = response.json()
+        except json.decoder.JSONDecodeError as e:
+            logger.error('Bad response when connecting to slack. Body:\n%s.', body)
+            raise ValueError from e
+
         self.ids = SlackIds(
             self._config.token, body['channels'], body['users'], body['groups'])
 
@@ -117,7 +143,7 @@ class Slack:
         return body['url']
 
     async def run(self):
-        """Main loop"""
+        """Main loop connects to websocket and listens indefinitely."""
         while True:
             logger.info('Connecting to websocket')
             websocket_url = await self.connect()
@@ -187,7 +213,7 @@ class Slack:
             await make_request(url, params, request_type='POST', files={'file': f})
 
     async def delete_message(self, channel, user, timestamp, admin_key=True):
-        """Delete a message"""
+        """Delete a message."""
         channel = channel if channel else self.ids.dmid(user)
         token = self._config.admin_token if admin_key else self._config.token
         if token is None:
@@ -201,18 +227,22 @@ class Slack:
 
     def register_handler(self, func, data):
         """
-        Registers a function with Slack to be called when certain conditions are matched.
+        Registers a function with Slack to be called when certain conditions are
+        matched.
+        Prefer using asyncbots.bot.register to directly calling this.
         Args:
             func: The function to call
             data: A HandlerData (namedtuple) containing:
                 expr: A pyparsing expression.
                       func will be called when it is matched.
                       If expr is None, all messages will be passed to func.
-                name: The name of this handler. This is used as the key to store the handler.
+                name: The name of this handler. This is used as the key to store
+                    the handler.
                 doc: Help text
                 priority: Handlers are checked in order of descending priority.
                 admin: Whether or not this handler is only accessible to admins
-                include_timestamp: Whether the command receives message timestamps
+                include_timestamp: Whether the command receives message
+                    timestamps
         """
         name, expr, channels, doc, priority, admin, include_ts = data
         if expr is None:
@@ -233,6 +263,12 @@ class Slack:
             self._handlers.filtered[name] = handler
 
     async def _handle_message(self, event):
+        """
+        Main logic for dispatching events to bots. Messages in channels are only
+        parsed if they begin with self._alert. Messages in DMs are always
+        parsed. All unfiltered handlers are applied to messages which are not
+        successfully parsed, and are not DMs.
+        """
         user = event['user']
         channel = event['channel']
         is_dm = channel[0] == 'D'
@@ -287,6 +323,11 @@ class Slack:
                     timestamp=event['ts'])
 
     async def _handle_response(self, event):
+        """
+        Handles responses from Slack server to sent messages.  Executes any
+        callbacks with the corresponding message ID then removes them from the
+        _response_callback map.
+        """
         rt = event["reply_to"]
         if rt in self._response_callbacks:
             cb, ch = self._response_callbacks[rt]
@@ -295,21 +336,28 @@ class Slack:
             del self._response_callbacks[rt]
 
     async def _exhaust_command(self, command, event):
-        """Run a command, any command that generates and so on until None is returned."""
-        while command:
-            if isinstance(command, Command):
-                command = await command.execute(self, event)
-            else:
-                for com in command:
-                    await self._exhaust_command(com, event)
-                command = None
+        """Run a command, any commands that generates and so on until None is
+        returned. Commands are executed depth first."""
+        # Command may either be a single Command or list[Command]
+        stack = [command] if isinstance(command, Command) else [c for c in command]
+        while stack:
+            next_command = stack.pop()
+            new_command = await next_command.execute(self, event)
+            if isinstance(new_command, Command):
+                stack.append(new_command)
+            elif isinstance(new_command, list):
+                stack.extend(new_command)
 
     async def _get_event(self):
-        """Get a JSON event from and convert it to a dict"""
+        """Get a JSON event from the websocket and convert it to a dict"""
         event = await self.socket.recv()
         return json.loads(event)
 
     async def _get_history(self, include_dms=False):
+        """
+        Helper for iterating over all messages in Slack's history via the web
+        API.
+        """
         found_messages = 0
         channels = chain(
             self.ids.channel_ids, self.ids.dm_ids if include_dms else [])
@@ -354,7 +402,10 @@ class Slack:
         return past_events
 
     async def _load_history(self):
-        """Wipe the existing history and load the Slack message archive into the database"""
+        """
+        Wipe the existing history and load the Slack message archive into the
+        database
+        """
         HistoryDoc.objects().delete()
         logger.info('History Cleared')
         past_events = await self._get_history()
@@ -371,6 +422,10 @@ class Slack:
                     exit()
 
     async def _clear_commands(self):
+        """
+        Loop over all messages in Slack and delete them if they are a valid
+        command, or send by the bot user. Requires admin_key to be set.
+        """
         to_delete = []
         bot_id = self.ids.uid(self._config.name)
         past_events = await self._get_history(include_dms=True)
@@ -398,7 +453,9 @@ class Slack:
                 logger.info('Deleted %d messages so far', i)
 
     def _make_message(self, text, channel_id, response_callback):
-        """Build a JSON message & register callback if provided"""
+        """
+        Build a JSON message & register callback if provided. The callback will
+        be executed on the event corresponding to this message."""
         m_id, self._message_id = self._message_id, self._message_id + 1
         # register callback for when response is received indicating successful message post
         # need to save channel as well, since that isn't provided in response

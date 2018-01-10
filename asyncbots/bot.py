@@ -41,13 +41,13 @@ def register(name='name', expr='expr', channels=None, doc=None, priority=0, admi
 
 
 class SlackBotMeta(type):
-    """Metaclass for SlackBot"""
+    """Metaclass for SlackBot. Used to enforce execution of handler registration after init call in subclasses."""
     def __init__(cls, name, bases, cls_dict):
         super().__init__(name, bases, cls_dict)
         names = [a for a, val in cls_dict.items() if isinstance(val, SlackHandler)]
 
         def new_init(self, *args, **kwargs):
-            """Replaces __init__ on SlackBot. Loads all handlers."""
+            """Replaces __init__ on class. Calls original __init__, then registers all handlers with slack."""
             slack = kwargs.get('slack', None)
             if not isinstance(slack, Slack):
                 raise TypeError(
@@ -78,6 +78,6 @@ class SlackBotMeta(type):
 
 
 class SlackBot(metaclass=SlackBotMeta):
-    """Class to inherit from when making Slack bots"""
+    """Class to inherit from when making Slack bots (so no need to specify metaclass)."""
     def __init__(self, slack=None):
         pass
