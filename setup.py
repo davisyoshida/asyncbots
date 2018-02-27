@@ -25,12 +25,12 @@ A bot which can be triggered by the message ``!greet Guido`` looks like this:
         async def handler(self, sender, channel, parsed_message):
             return MessageCommand('Hello ' + parsed_message['user'])
 """
-from setuptools import setup
+from setuptools import setup,find_packages
 
 setup(
     name='asyncbots',
-    version='0.1.1',
-    packages=['asyncbots'],
+    version='0.1.2',
+    packages=find_packages(),
     license='MIT',
     long_description=__doc__,
     description='A framework for Slack RTM bots.',

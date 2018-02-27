@@ -4,7 +4,7 @@ from functools import partial, wraps
 
 from asyncbots.slack_api import Slack
 
-HandlerData = namedtuple('HandlerData', ['name', 'expr', 'channels', 'doc', 'priority', 'admin', 'include_timestamp'])
+HandlerData = namedtuple('HandlerData', ['name', 'expr', 'channels', 'doc', 'priority', 'admin', 'include_timestamp', 'unfiltered'])
 
 class SlackHandler:
     """
@@ -29,14 +29,14 @@ class SlackHandler:
         return self._func
 
 
-def register(name='name', expr='expr', channels=None, doc=None, priority=0, admin=False, include_timestamp=False):
+def register(name='name', expr='expr', channels=None, doc=None, priority=0, admin=False, include_timestamp=False, unfiltered=False):
     """
     Decorator for registering a function to be a slack handler.
     Must be used on a method in a class which inherits from SlackBot.
     """
     def wrap(f):
         """Create SlackHandler with f. Uses wraps to preseve metadata."""
-        return wraps(f)(SlackHandler(f, HandlerData(name, expr, channels, doc, priority, admin, include_timestamp)))
+        return wraps(f)(SlackHandler(f, HandlerData(name, expr, channels, doc, priority, admin, include_timestamp, unfiltered)))
     return wrap
 
 
@@ -71,7 +71,8 @@ class SlackBotMeta(type):
                     doc=doc,
                     priority=data.priority,
                     admin=data.admin,
-                    include_timestamp=data.include_timestamp)
+                    include_timestamp=data.include_timestamp,
+                    unfiltered=data.unfiltered)
 
                 slack.register_handler(func, mapped_data)
         setattr(cls, '__init__', new_init)

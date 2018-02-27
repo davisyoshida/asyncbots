@@ -244,8 +244,8 @@ class Slack:
                 include_timestamp: Whether the command receives message
                     timestamps
         """
-        name, expr, channels, doc, priority, admin, include_ts = data
-        if expr is None:
+        name, expr, channels, doc, priority, admin, include_ts, unfiltered = data
+        if unfiltered:
             uhandler = UnfilteredHandler(name=name,
                                          func=func,
                                          channels=channels,
