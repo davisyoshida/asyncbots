@@ -60,8 +60,8 @@ class SlackBotMeta(type):
                 func = partial(handler.func, self)
                 data = handler.data
 
-                name = getattr(self, data.name) if data.name else ''
-                expr = getattr(self, data.expr) if data.expr else None
+                name = getattr(self, data.name) if (data.name and not data.unfiltered) else ''
+                expr = getattr(self, data.expr) if (data.expr and not data.unfiltered) else None
                 channels = getattr(self, data.channels) if data.channels else None
                 doc = getattr(self, data.doc) if data.doc else ''
                 mapped_data = HandlerData(

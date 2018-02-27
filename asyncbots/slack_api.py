@@ -299,6 +299,7 @@ class Slack:
                         channel=channel_name, user=user, text='That command is admin only.')
             else:
                 command = None
+
             await self._exhaust_command(command, event)
         else:
             parsed = None
@@ -339,6 +340,8 @@ class Slack:
         """Run a command, any commands that generates and so on until None is
         returned. Commands are executed depth first."""
         # Command may either be a single Command or list[Command]
+        if not command:
+            return
         stack = [command] if isinstance(command, Command) else [c for c in command]
         while stack:
             next_command = stack.pop()
