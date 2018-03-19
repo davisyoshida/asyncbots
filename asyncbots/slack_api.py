@@ -342,7 +342,7 @@ class Slack:
         # Command may either be a single Command or list[Command]
         if not command:
             return
-        stack = [command] if isinstance(command, Command) else [c for c in command]
+        stack = [command] if isinstance(command, Command) else reversed(command)
         while stack:
             next_command = stack.pop()
             new_command = await next_command.execute(self, event)
