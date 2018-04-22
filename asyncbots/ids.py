@@ -14,9 +14,9 @@ class SlackIds:
         """
         Args:
             token: Slack token. Used to get DM room IDs
-            channels: 'channels' from body of response to rtm.start API call
-            users: 'users' from body of response to rtm.start API call
-            groups: 'groups' from body of response to rtm.start API call
+            channels: result of channels.list call
+            users: result of users.list call
+            groups: result of groups.list call
         """
         # Define dictionaries for mappings between different user identifiers
         self._c_name_to_id = {c['name']: c['id']

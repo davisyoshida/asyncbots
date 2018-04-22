@@ -29,7 +29,7 @@ from setuptools import setup,find_packages
 
 setup(
     name='asyncbots',
-    version='0.1.5', packages=find_packages(),
+    version='0.1.7', packages=find_packages(),
     license='MIT',
     long_description=__doc__,
     description='A framework for Slack RTM bots.',

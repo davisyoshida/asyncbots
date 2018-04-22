@@ -45,6 +45,9 @@ DEFAULT_CONFIG = SlackConfig(
     db=False)
 
 RTM_START = 'rtm.start'
+USER_LIST = 'users.list'
+CHANNEL_LIST = 'channels.list'
+GROUP_LIST = 'groups.list'
 CHANNEL_HISTORY = 'channels.history'
 GROUP_HISTORY = 'groups.history'
 IM_HISTORY = 'im.history'
@@ -115,30 +118,37 @@ class Slack:
 
     async def connect(self):
         """Connects to Slack, loads IDs, runs preloaded commands and returns the websocket URL."""
-        response = requests.get(
-            BASE_URL + RTM_START, params={'token': self._config.token})
-        try:
-            body = response.json()
-        except json.decoder.JSONDecodeError as e:
-            logger.error('Bad response when connecting to slack. Body:\n%s.', body)
-            raise ValueError from e
 
-        self.ids = SlackIds(
-            self._config.token, body['channels'], body['users'], body['groups'])
+        api_params = {'token': self._config.token}
+        users = requests.get(BASE_URL + USER_LIST, params=api_params).json()['members']
+        channels = requests.get(BASE_URL + CHANNEL_LIST, params=api_params).json()['channels']
+        groups = requests.get(BASE_URL + GROUP_LIST, params=api_params).json()['groups']
+
+        logger.info('Populaing IDs')
+        self.ids = SlackIds(self._config.token, channels, users, groups)
 
         if self._config.admins is not None:
             for admin_name in self._config.admins:
                 self.admins.add(self.ids.uid(admin_name))
 
         if self._config.load_history and self._config.db:
+            logger.info('Loading history')
             await self._load_history()
             self._config = SlackConfig(
                 **ChainMap({'load_history': False}, self._config._asdict()))
         if self._config.clear_commands:
+            logger.info('Clearing commands')
             loop = asyncio.get_event_loop()
             loop.create_task(handle_async_exception(self._clear_commands))
             self._config = SlackConfig(
                 **ChainMap({'clear_commands': False}, self._config._asdict()))
+        response = requests.get(
+            BASE_URL + RTM_START, params=api_params)
+        try:
+            body = response.json()
+        except json.decoder.JSONDecodeError as e:
+            logger.error('Bad response when connecting to slack. Body:\n%s.', body)
+            raise ValueError from e
 
         return body['url']
 
