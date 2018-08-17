@@ -124,7 +124,7 @@ class Slack:
         channels = requests.get(BASE_URL + CHANNEL_LIST, params=api_params).json()['channels']
         groups = requests.get(BASE_URL + GROUP_LIST, params=api_params).json()['groups']
 
-        logger.info('Populaing IDs')
+        logger.info('Populating IDs')
         self.ids = SlackIds(self._config.token, channels, users, groups)
 
         if self._config.admins is not None:
@@ -182,6 +182,9 @@ class Slack:
                             uname = event['user']['name']
                             uid = event['user']['id']
                             self.ids.add_user(uname=uname, uid=uid)
+                        elif events.is_goodbye(event):
+                            raise websockets.exceptions.ConnectionClosed
+
             except websockets.exceptions.ConnectionClosed:
                 logger.info('Websocket closed')
 
